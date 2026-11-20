@@ -1,0 +1,12 @@
+{
+  "name": "imessage-secure-messaging-visualizer",
+  "private": true,
+  "description": "Source for iMessage-Secure-Messaging-Visualizer.html, a 3D step-by-step visual aid showing how iMessage sends and receives messages securely.",
+  "scripts": {
+    "build": "python3 build.py"
+  },
+  "devDependencies": {
+    "esbuild": "0.27.7",
+    "three": "0.186.1"
+  }
+}

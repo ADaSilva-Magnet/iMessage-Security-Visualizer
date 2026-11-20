@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<!-- Security policy: this page makes no network requests and runs only its own built-in script (pinned by hash).
+     Editing the script below will stop it from running; rebuild the file instead. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src '__CSP_SCRIPT_HASH__'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>iMessage · How messages are sent and received securely — 3D Visualizer</title>
+<style>
+:root {
+  --bg: #050a14; --panel: rgba(9, 17, 32, 0.8); --panel-b: rgba(120, 170, 255, 0.18);
+  --text: #e8eef9; --muted: #9fb0c8; --accent: #3aa0ff; --accent2: #22d3ee;
+  --send: #3aa0ff; --sign: #fbbf24; --rand: #e2e8f0; --ids: #22d3ee; --apns: #f472b6; --cloud: #7dd3fc;
+  --phone: #4ade80; --pad: #a78bfa; --mac: #fb923c; --tls: #2dd4bf;
+  --font: "Segoe UI", "Segoe UI Variable Text", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); overflow: hidden; }
+button { font-family: inherit; }
+#app { position: fixed; inset: 0; }
+#gl { position: absolute; inset: 0; }
+#gl canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+.topbar { position: absolute; inset-block-start: 0; inset-inline: 0; height: 62px; display: flex; align-items: center; gap: 14px;
+  padding-inline: 18px; background: linear-gradient(to bottom, rgba(3, 7, 16, 0.92), rgba(3, 7, 16, 0.55)); border-block-end: 1px solid rgba(255,255,255,0.06); z-index: 6; }
+.mark { flex: none; font-weight: 800; letter-spacing: .06em; font-size: 14px; color: #fff; padding: 7px 10px; border-radius: 9px;
+  background: linear-gradient(135deg, #1673c6, #22b8e6); box-shadow: 0 4px 18px rgba(34, 160, 230, .35); }
+.titles { min-width: 0; }
+.titles .k { font-size: 11.5px; color: var(--muted); letter-spacing: .03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.titles .k b { font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #b8c6da; margin-inline-end: 3px; }
+.titles h1 { margin: 2px 0 0; font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.top-actions { margin-inline-start: auto; display: flex; gap: 8px; align-items: center; }
+.where { text-align: end; margin-inline-end: 6px; }
+.where small { display: block; font-size: 11px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+.where b { font-size: 15px; white-space: nowrap; }
+.btn { appearance: none; border: 1px solid var(--panel-b); background: rgba(255, 255, 255, 0.06); color: var(--text); border-radius: 10px;
+  padding: 8px 11px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.btn:hover { background: rgba(255, 255, 255, 0.13); }
+.btn:focus-visible, .chip:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+.btn[aria-pressed="true"] { background: rgba(58, 160, 255, 0.2); border-color: rgba(58, 160, 255, 0.5); }
+.btn:disabled { opacity: .35; cursor: default; }
+.progress { position: absolute; inset-inline: 0; inset-block-start: 62px; height: 3px; background: rgba(255, 255, 255, 0.05); z-index: 6; }
+.progress i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width .5s ease; }
+
+.info { position: absolute; inset-block-start: 80px; inset-block-end: 98px; inset-inline-start: 18px; width: clamp(290px, 24vw, 410px);
+  background: var(--panel); border: 1px solid var(--panel-b); border-radius: 18px; z-index: 4; display: flex; flex-direction: column;
+  backdrop-filter: blur(12px); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5); transition: transform .45s ease, opacity .45s ease; }
+.info.hidden { transform: translateX(calc(-100% - 30px)); opacity: 0; pointer-events: none; }
+#infoBody { overflow-y: auto; padding: 20px 22px 18px; scrollbar-width: thin; animation: fadeIn .45s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.kicker { color: var(--accent2); font-size: 11.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+#infoBody h2 { margin: 6px 0 12px; font-size: clamp(22px, 2vw, 30px); line-height: 1.15; }
+.badge { display: inline-block; padding: 5px 11px; border-radius: 999px; background: rgba(251, 191, 36, 0.14); color: #fcd34d; font-weight: 700; font-size: 13px; margin-block-end: 8px; }
+.lead { font-size: clamp(14.5px, 1.1vw, 17px); line-height: 1.5; color: #dbe5f3; margin: 0 0 14px; }
+.spec { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 16px; }
+.spec.one { grid-template-columns: 1fr; }
+.spec .box { border-radius: 12px; padding: 10px 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.09); }
+.spec .box span { display: block; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.spec .box b { display: block; margin-block-start: 5px; font-size: clamp(15px, 1.15vw, 18px); line-height: 1.25; }
+.spec .box small { display: block; margin-block-start: 4px; color: var(--muted); font-size: 12.5px; }
+.spec .rec { background: rgba(58, 160, 255, 0.12); border-color: rgba(58, 160, 255, 0.38); }
+.spec .rec span { color: #93c5fd; }
+.rows { display: flex; flex-direction: column; gap: 7px; margin: 10px 0 16px; }
+.rows div { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; background: rgba(255, 255, 255, 0.05); }
+.rows i { width: 12px; height: 12px; border-radius: 4px; flex: none; box-shadow: 0 0 10px currentColor; }
+.rows span { font-weight: 800; min-width: 84px; font-size: 14.5px; }
+.rows em { font-style: normal; color: #d6e0ee; font-size: 14px; }
+.points { margin: 0; padding-inline-start: 20px; display: flex; flex-direction: column; gap: 9px; font-size: clamp(14px, 1.05vw, 16.5px); line-height: 1.45; color: #d3deec; }
+.points b { color: #fff; }
+.points li::marker { color: var(--accent2); }
+.link { margin-block-start: 14px; padding: 10px 12px; border-radius: 12px; background: rgba(34, 211, 238, 0.08); border: 1px solid rgba(34, 211, 238, 0.25); font-size: 14.5px; line-height: 1.4; }
+.link span { display: block; font-size: 11px; font-weight: 800; color: var(--accent2); letter-spacing: .1em; text-transform: uppercase; margin-block-end: 4px; }
+.note { margin: 12px 0 0; font-size: 13px; line-height: 1.45; color: var(--muted); }
+.define { margin: 0 0 14px; padding: 10px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.045); border: 1px solid rgba(203, 213, 225, 0.22);
+  font-size: 14px; line-height: 1.42; color: #d6e0ee; }
+.define .term { color: #fff; font-weight: 800; }
+.define p { margin: 0; }
+.define b { color: #fff; }
+.define .pair { display: flex; gap: 9px; align-items: flex-start; margin-block-start: 7px; }
+.define .pair i { width: 10px; height: 10px; border-radius: 3px; flex: none; margin-block-start: 0.38em; box-shadow: 0 0 8px currentColor; }
+.points ol, ol.points { padding-inline-start: 22px; }
+ol.points li::marker { color: var(--accent2); font-weight: 800; }
+
+.bottombar { position: absolute; inset-inline: 0; inset-block-end: 0; height: 84px; display: flex; align-items: center; gap: 12px; padding-inline: 18px;
+  background: linear-gradient(to top, rgba(3, 7, 16, 0.95), rgba(3, 7, 16, 0.6)); border-block-start: 1px solid rgba(255,255,255,0.06); z-index: 6; }
+.nav { flex: none; min-width: 100px; height: 50px; font-size: 15px; font-weight: 700; border-radius: 12px; }
+.nav.primary { background: linear-gradient(135deg, #1673c6, #1d9bf0); border-color: transparent; }
+.nav.primary:hover { filter: brightness(1.1); }
+.chips { flex: 1; display: flex; gap: 5px; overflow-x: auto; align-items: center; padding: 8px 4px; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { flex: none; padding: 8px 10px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.05);
+  color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background .2s, color .2s; }
+.chip:hover { background: rgba(255, 255, 255, 0.11); color: #fff; }
+.chip.done { color: #cdd8e6; }
+.chip.active { background: rgba(58, 160, 255, 0.26); color: #fff; border-color: rgba(58, 160, 255, 0.65); box-shadow: 0 0 16px rgba(58, 160, 255, 0.35); }
+.sep { width: 1px; height: 26px; background: rgba(255, 255, 255, 0.14); flex: none; margin-inline: 2px; }
+
+#labels { position: absolute; inset: 0; pointer-events: none; z-index: 3; opacity: 0; transition: opacity .35s ease; }
+#labels.show { opacity: 1; }
+#leaders { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+#leaders line { stroke-width: 1.6; opacity: .85; }
+.tag { position: absolute; left: 0; top: 0; padding: 7px 11px; border-radius: 10px; background: rgba(5, 11, 22, 0.86); border: 1px solid var(--c, #3aa0ff);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--c, #3aa0ff) 35%, transparent); white-space: nowrap; }
+.tag b { display: block; font-size: 15px; color: #fff; }
+.tag small { display: block; font-size: 12.5px; color: var(--c, #3aa0ff); margin-block-start: 2px; font-weight: 600; }
+
+.inset { position: absolute; inset-inline-end: 18px; inset-block-end: 98px; width: clamp(300px, 31vw, 580px); z-index: 5; cursor: zoom-in;
+  transition: opacity .35s ease, transform .35s ease, width .35s ease; }
+.inset.off { opacity: 0; transform: translateY(18px); pointer-events: none; }
+.inset.big { width: min(74vw, 1250px); inset-inline-end: calc(50% - min(37vw, 625px)); cursor: zoom-out; }
+.inset .cap { font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.inset .bezel { background: #0a0d12; border-radius: 12px; padding: 7px 7px 12px; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08); }
+.inset canvas { display: block; width: 100%; height: auto; border-radius: 3px; }
+
+.insetTab { position: absolute; inset-inline-end: 18px; inset-block-end: 98px; z-index: 5; opacity: .8; }
+.insetTab:hover { opacity: 1; }
+#loading { position: absolute; inset: 0; display: grid; place-items: center; background: var(--bg); z-index: 20; font-size: 18px; color: var(--muted); transition: opacity .6s ease; }
+#loading.done { opacity: 0; pointer-events: none; }
+#nogl { position: absolute; inset-block-start: 84px; inset-inline-end: 18px; z-index: 7; max-width: 380px; padding: 12px 14px; border-radius: 12px; background: rgba(127, 29, 29, 0.9); font-size: 14px; line-height: 1.4; }
+#help { position: absolute; inset: 0; display: none; place-items: center; background: rgba(0, 0, 0, 0.55); z-index: 30; }
+#help.open { display: grid; }
+#help .card { background: #0c1527; border: 1px solid var(--panel-b); border-radius: 16px; padding: 22px 26px; width: min(520px, 92vw); box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+#help h3 { margin: 0 0 12px; font-size: 20px; }
+#help dl { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 0 0 16px; font-size: 14.5px; }
+#help dt { font-weight: 800; color: var(--accent2); }
+#help dd { margin: 0; color: #d6e0ee; }
+
+/* no-WebGL fallback: notes on the left, monitor on the right, message underneath */
+.nogl .inset.big { inset-block-start: 80px; inset-block-end: auto; inset-inline-end: 18px;
+  width: min(calc(100vw - clamp(290px, 24vw, 410px) - 60px), calc((100vh - 80px - 98px - 96px) * 16 / 9)); cursor: default; }
+.nogl #nogl { inset-block-start: auto; inset-block-end: 98px; inset-inline-start: calc(clamp(290px, 24vw, 410px) + 36px); inset-inline-end: 18px; max-width: none; }
+@media (max-width: 1440px) {
+  .titles h1 { font-size: 15.5px; }
+  .where small { display: none; }
+  .btn { padding: 7px 9px; font-size: 12.5px; }
+  .nav { min-width: 86px; height: 46px; font-size: 14px; }
+  .chips { gap: 4px; }
+  .chip { padding: 7px 8px; font-size: 12px; }
+  .sep { margin-inline: 1px; }
+}
+@media (max-height: 800px) {
+  .topbar { height: 54px; }
+  .progress { inset-block-start: 54px; }
+  .info { inset-block-start: 68px; inset-block-end: 84px; }
+  .bottombar { height: 72px; }
+  .inset, .insetTab { inset-block-end: 84px; }
+  #infoBody { padding: 14px 16px 12px; }
+  #infoBody h2 { font-size: 22px; margin: 4px 0 8px; }
+  .lead { font-size: 14px; margin-block-end: 10px; }
+  .spec { margin: 6px 0 10px; gap: 8px; }
+  .spec .box { padding: 7px 10px; }
+  .spec .box b { font-size: 14.5px; }
+  .rows { margin: 6px 0 10px; gap: 5px; }
+  .rows div { padding: 6px 10px; }
+  .rows span { font-size: 13.5px; min-width: 76px; }
+  .rows em { font-size: 13px; }
+  .points { font-size: 13.5px; gap: 6px; line-height: 1.4; }
+  .link { margin-block-start: 10px; padding: 8px 10px; font-size: 13.5px; }
+  .define { margin-block-end: 10px; padding: 8px 10px; font-size: 13.5px; line-height: 1.38; }
+}
+@media (max-width: 900px) {
+  .info { inset-block-start: auto; inset-block-end: 92px; width: auto; inset-inline: 10px; max-height: 36vh; }
+  .titles .k, .where { display: none; }
+  .inset { width: 46vw; inset-block-start: 74px; inset-block-end: auto; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="gl"></div>
+  <div id="labels"><svg id="leaders" aria-hidden="true"></svg></div>
+
+  <header class="topbar">
+    <span class="mark">iMessage</span>
+    <div class="titles">
+      <div class="k" title="Source: Apple Platform Security Guide.pdf, August 2026"><b>Source:</b> Apple Platform Security Guide.pdf · August 2026</div>
+      <h1>How iMessage sends and receives messages securely</h1>
+    </div>
+    <div class="top-actions">
+      <div class="where"><small id="groupName">Start</small><b id="stepCount">1 / 15</b></div>
+      <button class="btn" id="btnNotes" type="button" aria-pressed="true" title="Show or hide the notes panel (N)">Notes</button>
+      <button class="btn" id="btnCloseup" type="button" title="Close-up panel: auto, always or never (C)">Close-up: auto</button>
+      <button class="btn" id="btnReset" type="button" title="Return the camera to this step's view (R)">Reset view</button>
+      <button class="btn" id="btnFull" type="button" title="Full screen (F)">Full screen</button>
+      <button class="btn" id="btnHelp" type="button" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
+    </div>
+  </header>
+  <div class="progress"><i id="progress"></i></div>
+
+  <aside class="info" id="info" aria-live="polite"><div id="infoBody"></div></aside>
+
+  <div class="inset off" id="inset" title="Click to enlarge or shrink">
+    <div class="cap" id="insetCap">Close-up</div>
+    <div class="bezel" id="insetScreen"></div>
+  </div>
+
+  <button class="btn insetTab" id="insetTab" type="button" hidden title="Show the close-up for this section (C)">Show close-up</button>
+
+  <nav class="bottombar" aria-label="Sections">
+    <button class="btn nav" id="btnBack" type="button" aria-label="Previous section">&#9664;&nbsp; Back</button>
+    <div class="chips" id="chips"></div>
+    <button class="btn nav primary" id="btnNext" type="button" aria-label="Next section">Next &nbsp;&#9654;</button>
+  </nav>
+
+  <div id="nogl" hidden>3D graphics (WebGL) aren't available in this browser, so the 3D scene can't be drawn. The notes and the close-up still work — try Chrome or Edge with hardware acceleration on.</div>
+
+  <div id="help" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
+    <div class="card">
+      <h3>Presenting with this visualizer</h3>
+      <dl>
+        <dt>→ / Page Down / Space</dt><dd>Next section (works with most presentation clickers)</dd>
+        <dt>← / Page Up</dt><dd>Previous section</dd>
+        <dt>Home / End</dt><dd>First / last section</dd>
+        <dt>Drag · scroll</dt><dd>Orbit and zoom around the scene</dd>
+        <dt>R</dt><dd>Reset the camera for this section</dd>
+        <dt>P</dt><dd>Play this section's animation again (or click its button)</dd>
+        <dt>N</dt><dd>Show or hide the notes panel</dd>
+        <dt>C</dt><dd>Close-up panel: auto / always / never (click it to enlarge)</dd>
+        <dt>L</dt><dd>Show or hide the 3D labels</dd>
+        <dt>F</dt><dd>Full screen</dd>
+      </dl>
+      <button class="btn" id="helpClose" type="button">Close</button>
+    </div>
+  </div>
+
+  <div id="loading">Building the scene…</div>
+</div>
+<script>
+/*__BUNDLE__*/
+</script>
+</body>
+</html>
